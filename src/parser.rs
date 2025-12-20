@@ -44,9 +44,17 @@ fn parse_content(content: &str) -> Result<Resume> {
 
     // Let's parse into a temporary structure or direct fields.
     // Since we are inside the crate, we *could* modify Resume directly if fields are pub, which they are.
-    // But let's stick to the builder usage to respect the "API".
-    // We will accumulate experiences and educations in vectors and add them in batch if the builder supports it,
-    // or just chain them at the end.
+    // Helper to flush current state
+    let mut flush_state =
+        |state: &mut State,
+         experiences: &mut Vec<crate::resume::Experience>,
+         educations: &mut Vec<crate::resume::Education>| {
+            match std::mem::replace(state, State::Root) {
+                State::Experience(b) => experiences.push(b.finish()),
+                State::Education(b) => educations.push(b.finish()),
+                State::Root => {}
+            }
+        };
 
     let mut name = String::new();
     let mut email = String::new();
@@ -68,6 +76,11 @@ fn parse_content(content: &str) -> Result<Resume> {
         if line.is_empty() {
             i += 1;
             continue;
+        }
+
+        if line.starts_with("@") {
+            // New directive starting, flush previous block
+            flush_state(&mut state, &mut experiences, &mut educations);
         }
 
         if line.starts_with("@experience:") {
@@ -93,7 +106,6 @@ fn parse_content(content: &str) -> Result<Resume> {
             state = State::Root;
             i += 1;
         } else if let Some(stripped) = line.strip_prefix("@summary:") {
-            // Read until next directive
             state = State::Root;
             i += 1;
             let mut summary_lines = Vec::new();
@@ -110,9 +122,6 @@ fn parse_content(content: &str) -> Result<Resume> {
             summary = summary_lines.join("\n");
         } else if let Some(stripped) = line.strip_prefix("@skills:") {
             state = State::Root;
-            // Can be inline or multiline?
-            // Assume multiline until next directive or empty line?
-            // The example shows comma separated on next line.
             i += 1;
             let mut skill_text = stripped.trim().to_string();
             while i < lines.len() && !lines[i].trim().starts_with("@") {
@@ -162,14 +171,6 @@ fn parse_content(content: &str) -> Result<Resume> {
                     } else {
                         // assume part of previous description? or just ignore
                     }
-
-                    // Check lookahead to see if block ends (next line is directive)
-                    if i + 1 >= lines.len() || lines[i + 1].trim().starts_with("@") {
-                        // End of block
-                        let finished_exp = std::mem::take(exp_builder).finish();
-                        experiences.push(finished_exp);
-                        state = State::Root;
-                    }
                     i += 1;
                 }
                 State::Education(edu_builder) => {
@@ -180,17 +181,14 @@ fn parse_content(content: &str) -> Result<Resume> {
                     } else if let Some(val) = line.strip_prefix("year:") {
                         *edu_builder = std::mem::take(edu_builder).year(val.trim());
                     }
-
-                    if i + 1 >= lines.len() || lines[i + 1].trim().starts_with("@") {
-                        let finished_edu = std::mem::take(edu_builder).finish();
-                        educations.push(finished_edu);
-                        state = State::Root;
-                    }
                     i += 1;
                 }
             }
         }
     }
+
+    // Final flush
+    flush_state(&mut state, &mut experiences, &mut educations);
 
     // Construct final resume
     let mut builder = Resume::build().name(&name).email(&email);
