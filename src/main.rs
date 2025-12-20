@@ -1,4 +1,5 @@
 mod resume;
+mod pdf_renderer;
 
 use resume::Resume;
 
@@ -43,4 +44,11 @@ fn main() {
 
     // The Display trait is implemented to output Markdown.
     println!("{}", my_resume);
+
+    // Generate PDF
+    if let Err(e) = pdf_renderer::export_to_pdf(&my_resume, "resume.pdf") {
+        eprintln!("Error generating PDF: {:#}", e);
+    } else {
+        println!("Successfully generated resume.pdf");
+    }
 }
