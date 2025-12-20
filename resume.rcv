@@ -1,0 +1,32 @@
+@name: Nana Adjei Manu
+@email: nana@example.com
+@phone: +1-555-0102
+@website: https://nanamanu.com
+
+@summary:
+Senior Software Engineer with a passion for Rust, Distributed Systems, and AI.
+Proven track record of building scalable applications.
+
+@skills:
+Rust, Go, Python, Kubernetes, AWS, React
+
+@experience:
+title: Senior Software Engineer
+company: Tech Giants Inc.
+date: 2023-01 - Present
+description: Leading the backend infrastructure team.
+- Improved API latency by 40% using Rust.
+- Mentored 3 junior engineers to promotion.
+
+@experience:
+title: Software Engineer
+company: Startup Hustle
+date: 2020-05 - 2022-12
+description: Full stack development for a rapid-growth startup.
+- Built the initial MVP in 3 months.
+- Scaled database from 1k to 1M users.
+
+@education:
+school: University of Technology
+degree: B.S. Computer Science
+year: 2020
