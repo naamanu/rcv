@@ -15,7 +15,7 @@ pub fn parse_file(path: impl AsRef<Path>) -> Result<Resume> {
 }
 
 fn parse_content(content: &str) -> Result<Resume> {
-    let mut builder = ResumeBuilder::default();
+    let builder = ResumeBuilder::default();
 
     // We parse line by line, but some directives start a block (like @experience).
     // This simple state machine tracks what we are currently building.
@@ -45,16 +45,15 @@ fn parse_content(content: &str) -> Result<Resume> {
     // Let's parse into a temporary structure or direct fields.
     // Since we are inside the crate, we *could* modify Resume directly if fields are pub, which they are.
     // Helper to flush current state
-    let mut flush_state =
-        |state: &mut State,
-         experiences: &mut Vec<crate::resume::Experience>,
-         educations: &mut Vec<crate::resume::Education>| {
-            match std::mem::replace(state, State::Root) {
-                State::Experience(b) => experiences.push(b.finish()),
-                State::Education(b) => educations.push(b.finish()),
-                State::Root => {}
-            }
-        };
+    let flush_state = |state: &mut State,
+                       experiences: &mut Vec<crate::resume::Experience>,
+                       educations: &mut Vec<crate::resume::Education>| {
+        match std::mem::replace(state, State::Root) {
+            State::Experience(b) => experiences.push(b.finish()),
+            State::Education(b) => educations.push(b.finish()),
+            State::Root => {}
+        }
+    };
 
     let mut name = String::new();
     let mut email = String::new();
