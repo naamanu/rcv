@@ -1,24 +1,16 @@
 use crate::resume::Resume;
-use anyhow::Context;
+use anyhow::{Context, Result};
 use font_kit::family_name::FamilyName;
 use font_kit::properties::{Properties, Style as FontStyle, Weight};
 use font_kit::source::SystemSource;
 use genpdf::elements;
 use genpdf::{Element, SimplePageDecorator, style};
 
-fn load_font_data(
-    family_name: &str,
-    bold: bool,
-    italic: bool,
-) -> anyhow::Result<genpdf::fonts::FontData> {
+fn load_font_data(family_name: &str, weight: Weight, style: FontStyle) -> Result<genpdf::fonts::FontData> {
     let source = SystemSource::new();
     let mut props = Properties::new();
-    props.weight(if bold { Weight::BOLD } else { Weight::NORMAL });
-    props.style(if italic {
-        FontStyle::Italic
-    } else {
-        FontStyle::Normal
-    });
+    props.weight(weight);
+    props.style(style);
 
     let family = FamilyName::Title(family_name.to_string());
 
@@ -35,19 +27,14 @@ fn load_font_data(
         .map_err(|e| anyhow::anyhow!("Failed to parse font data: {}", e))
 }
 
-pub fn export_to_pdf(resume: &Resume, output_file: &str) -> anyhow::Result<()> {
-    // 1. Load fonts from system
+pub fn export_to_pdf(resume: &Resume, output_file: &str) -> Result<()> {
     println!("Loading system fonts...");
-    let regular = load_font_data("Arial", false, false)?;
-    let bold = load_font_data("Arial", true, false)?;
-    let italic = load_font_data("Arial", false, true)?;
-    let bold_italic = load_font_data("Arial", true, true)?;
 
     let font_family = genpdf::fonts::FontFamily {
-        regular,
-        bold,
-        italic,
-        bold_italic,
+        regular: load_font_data("Arial", Weight::NORMAL, FontStyle::Normal)?,
+        bold: load_font_data("Arial", Weight::BOLD, FontStyle::Normal)?,
+        italic: load_font_data("Arial", Weight::NORMAL, FontStyle::Italic)?,
+        bold_italic: load_font_data("Arial", Weight::BOLD, FontStyle::Italic)?,
     };
 
     // 2. Create the document
@@ -66,15 +53,16 @@ pub fn export_to_pdf(resume: &Resume, output_file: &str) -> anyhow::Result<()> {
     doc.push(title_para.styled(style::Style::new().bold().with_font_size(24)));
 
     // Contact Info
-    let mut contact_parts = vec![resume.email.clone()];
-    if let Some(phone) = &resume.phone {
-        contact_parts.push(phone.clone());
-    }
-    if let Some(website) = &resume.website {
-        contact_parts.push(website.clone());
-    }
-
-    let contact_text = contact_parts.join(" | ");
+    let contact_text = [
+        Some(&resume.email),
+        resume.phone.as_ref(),
+        resume.website.as_ref(),
+    ]
+    .iter()
+    .flatten()
+    .map(|s| s.as_str())
+    .collect::<Vec<_>>()
+    .join(" | ");
     let mut contact_para = elements::Paragraph::new(contact_text);
     contact_para.set_alignment(genpdf::Alignment::Center);
     doc.push(contact_para.styled(style::Style::new().with_font_size(10)));
@@ -117,10 +105,10 @@ pub fn export_to_pdf(resume: &Resume, output_file: &str) -> anyhow::Result<()> {
             let title_para = elements::Paragraph::new(title_text);
             doc.push(title_para.styled(style::Style::new().bold().with_font_size(11)));
 
-            let mut date_text = format!("{}", exp.start_date);
-            if let Some(end) = &exp.end_date {
-                date_text.push_str(&format!(" - {}", end));
-            }
+            let date_text = match &exp.end_date {
+                Some(end) => format!("{} - {}", exp.start_date, end),
+                None => exp.start_date.clone(),
+            };
             let date_para = elements::Paragraph::new(date_text);
             doc.push(
                 date_para.styled(
@@ -168,11 +156,13 @@ pub fn export_to_pdf(resume: &Resume, output_file: &str) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn section_header(text: &str) -> impl Element {
-    let p = elements::Paragraph::new(text);
+fn section_header(text: &str) -> elements::LinearLayout {
     let mut layout = elements::LinearLayout::vertical();
     layout.push(elements::Break::new(0.5));
-    layout.push(p.styled(style::Style::new().bold().with_font_size(14)));
+    layout.push(
+        elements::Paragraph::new(text)
+            .styled(style::Style::new().bold().with_font_size(14))
+    );
     layout.push(elements::Break::new(0.5));
     layout
 }
