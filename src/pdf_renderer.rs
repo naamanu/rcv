@@ -91,8 +91,20 @@ pub fn export_to_pdf(resume: &Resume, output_file: &str) -> anyhow::Result<()> {
     // --- Skills ---
     if !resume.skills.is_empty() {
         doc.push(section_header("Skills"));
-        let skills_text = resume.skills.join(", ");
-        doc.push(elements::Paragraph::new(skills_text));
+
+        if !resume.skills.languages.is_empty() {
+            let text = format!("Languages: {}", resume.skills.languages.join(", "));
+            doc.push(elements::Paragraph::new(text));
+        }
+        if !resume.skills.frameworks.is_empty() {
+            let text = format!("Frameworks: {}", resume.skills.frameworks.join(", "));
+            doc.push(elements::Paragraph::new(text));
+        }
+        if !resume.skills.tools.is_empty() {
+            let text = format!("Tools: {}", resume.skills.tools.join(", "));
+            doc.push(elements::Paragraph::new(text));
+        }
+
         doc.push(elements::Break::new(1.0));
     }
 

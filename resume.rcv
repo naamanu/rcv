@@ -8,25 +8,51 @@ Senior Software Engineer with a passion for Rust, Distributed Systems, and AI.
 Proven track record of building scalable applications.
 
 @skills:
-Rust, Go, Python, Kubernetes, AWS, React
+languages: TypeScript, Rust, Go, Python, Ocaml, Haskell, C/C++, Elm
+tools: Git, Docker, Kubernetes, AWS, Terraform, Linux
+frameworks: React, Next.js, Node.js, FastAPI,  Flask, Rescript, ReasonML
 
 @experience:
 title: Senior Software Engineer
-company: Tech Giants Inc.
-date: 2023-01 - Present
-description: Leading the backend infrastructure team.
-- Improved API latency by 40% using Rust.
-- Mentored 3 junior engineers to promotion.
+company: Uber
+date: Sep 2018 - Present
+description: Amsterdam, Netherlands
+- Results, impact and your contribution.
+- Add at numbers to the impact, use active languages and mention specifics like the languages used.
+- The more recent the position, the more details you usually want to share.
+- Lorem ipsum dolor sit amet 40%, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+- Ut enim ad minim veniam 100, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo.
+
+@experience:
+title: Software Engineer II
+company: Skyscanner
+date: 2017 - 2018
+description: London, UK
+- Results, impact and your contribution
+- Lorem ipsum dolor sit amet 40%, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+- Ut enim ad minim veniam 100, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo.
+
+@experience:
+title: Software Developer
+company: Skype
+date: 2015 - 2017
+description: London, UK
+- Results, impact and your contribution
+- As the position is more in the past, you’ll want to be mindful of how much details you add, and what you call out. You want to make sure there’s space on all the key details on the first page.
 
 @experience:
 title: Software Engineer
-company: Startup Hustle
-date: 2020-05 - 2022-12
-description: Full stack development for a rapid-growth startup.
-- Built the initial MVP in 3 months.
-- Scaled database from 1k to 1M users.
+company: LogMeIn
+date: Summer 2014
+description: London, UK
+- Results, impact and your contribution. The further in the past a position is, often the less important its details.
 
 @education:
-school: University of Technology
-degree: B.S. Computer Science
-year: 2020
+school: University of Munich
+degree: MSc Computer Science
+year: 2013 - 2014
+
+@education:
+school: Budapest University of Technology & Economics
+degree: BSc Computer Science
+year: 2010 - 2013

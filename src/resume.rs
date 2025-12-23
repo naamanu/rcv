@@ -1,7 +1,6 @@
 /// The main module for our Resume DSL.
 /// This module contains the data structures and the builder pattern implementation
 /// that creates the "Domain Specific Language" feel for creating resumes in Rust.
-
 use std::fmt;
 
 /// Represents the entire resume.
@@ -14,7 +13,38 @@ pub struct Resume {
     pub summary: Option<String>,
     pub experience: Vec<Experience>,
     pub education: Vec<Education>,
-    pub skills: Vec<String>,
+    pub skills: Skills,
+}
+
+/// Represents a set of skills.
+#[derive(Debug, Default, Clone)]
+pub struct Skills {
+    pub languages: Vec<String>,
+    pub frameworks: Vec<String>,
+    pub tools: Vec<String>,
+}
+
+impl Skills {
+    pub fn is_empty(&self) -> bool {
+        self.languages.is_empty() && self.frameworks.is_empty() && self.tools.is_empty()
+    }
+
+    pub fn add_language(&mut self, lang: String) {
+        self.languages.push(lang)
+    }
+
+    pub fn add_framework(&mut self, framework: String) {
+        self.frameworks.push(framework)
+    }
+    pub fn add_tool(&mut self, tool: String) {
+        self.tools.push(tool)
+    }
+
+    pub fn merge(&mut self, other: Skills) {
+        self.languages.extend(other.languages);
+        self.frameworks.extend(other.frameworks);
+        self.tools.extend(other.tools);
+    }
 }
 
 /// Represents a single job experience.
@@ -82,19 +112,30 @@ impl ResumeBuilder {
         self
     }
 
-    /// Adds a skill to the resume.
-    pub fn skill(mut self, skill: &str) -> Self {
-        self.resume.skills.push(skill.to_string());
+    /// Adds a skill(language) to the resume.
+    pub fn language(mut self, skill: &str) -> Self {
+        self.resume.skills.add_language(skill.to_string());
         self
     }
 
-    /// Adds multiple skills at once.
-    pub fn skills(mut self, skills: &[&str]) -> Self {
-        for s in skills {
-            self.resume.skills.push(s.to_string());
-        }
+    /// Adds a skill(tool) to the resume.
+    pub fn tool(mut self, skill: &str) -> Self {
+        self.resume.skills.add_tool(skill.to_string());
         self
     }
+
+    /// Adds a skill(framework) to the resume.
+    pub fn framework(mut self, skill: &str) -> Self {
+        self.resume.skills.add_framework(skill.to_string());
+        self
+    }
+    /// Adds multiple skills at once.
+    // pub fn skills(mut self, skills: &[&str]) -> Self {
+    //     for s in skills {
+    //         self.resume.skills.push(s.to_string());
+    //     }
+    //     self
+    // }
 
     /// Adds an experience section using a closure to build the Experience object.
     /// This allows for a nested DSL structure.
@@ -116,6 +157,11 @@ impl ResumeBuilder {
         let builder = EducationBuilder::default();
         let edu = build(builder).finish();
         self.resume.education.push(edu);
+        self
+    }
+
+    pub fn merge_skills(mut self, skills: Skills) -> Self {
+        self.resume.skills.merge(skills);
         self
     }
 
@@ -199,12 +245,39 @@ impl EducationBuilder {
     }
 }
 
+/// A builder struct for Skills
+#[derive(Default)]
+pub struct SkillsBuilder {
+    skills: Skills,
+}
+
+impl SkillsBuilder {
+    pub fn languages(mut self, languages: Vec<String>) -> Self {
+        self.skills.languages = languages.into_iter().map(|x| x).collect();
+        self
+    }
+
+    pub fn frameworks(mut self, frameworks: Vec<String>) -> Self {
+        self.skills.frameworks = frameworks.into_iter().map(|x| x).collect();
+        self
+    }
+
+    pub fn tools(mut self, tools: Vec<String>) -> Self {
+        self.skills.tools = tools.into_iter().map(|x| x).collect();
+        self
+    }
+
+    pub fn finish(self) -> Skills {
+        self.skills
+    }
+}
+
 // --- Output Formatting ---
 
 impl fmt::Display for Resume {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "# {}\n", self.name)?;
-        
+
         // Contact Info
         write!(f, "**Email:** {}", self.email)?;
         if let Some(phone) = &self.phone {
@@ -222,11 +295,21 @@ impl fmt::Display for Resume {
         }
 
         // Skills
-        if !self.skills.is_empty() {
-            writeln!(f, "## Skills")?;
-            writeln!(f, "{}\n", self.skills.join(", "))?;
+        writeln!(f, "## Skills")?;
+        if !self.skills.languages.is_empty() {
+            writeln!(f, "#### Languages")?;
+            writeln!(f, "{}\n", self.skills.languages.join(", "))?;
         }
 
+        if !self.skills.frameworks.is_empty() {
+            writeln!(f, "#### Frameworks")?;
+            writeln!(f, "{}\n", self.skills.frameworks.join(", "))?;
+        }
+
+        if !self.skills.tools.is_empty() {
+            writeln!(f, "#### Tools")?;
+            writeln!(f, "{}\n", self.skills.tools.join(", "))?;
+        }
         // Experience
         if !self.experience.is_empty() {
             writeln!(f, "## Experience")?;
@@ -238,7 +321,7 @@ impl fmt::Display for Resume {
                 } else {
                     writeln!(f)?;
                 }
-                
+
                 if let Some(desc) = &exp.description {
                     writeln!(f, "\n_{}_\n", desc)?;
                 }
