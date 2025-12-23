@@ -63,11 +63,12 @@ fn parse_content(content: &str) -> Result<Resume> {
             continue;
         }
 
+        // New @directive starting, flush previous block
         if line.starts_with("@") {
-            // New directive starting, flush previous block
             flush_state(&mut state, &mut experiences, &mut educations, &mut skills);
         }
 
+        // really dont like this, sure can make it better.
         if line.starts_with("@skills:") {
             state = State::Skills(SkillsBuilder::default());
             i += 1;
@@ -117,6 +118,7 @@ fn parse_content(content: &str) -> Result<Resume> {
                 }
                 State::Experience(exp_builder) => {
                     // Parse experience key-values
+                    // Can definitely make this better.
                     if let Some(val) = line.strip_prefix("title:") {
                         *exp_builder = std::mem::take(exp_builder).title(val.trim());
                     } else if let Some(val) = line.strip_prefix("company:") {
@@ -141,6 +143,7 @@ fn parse_content(content: &str) -> Result<Resume> {
                     i += 1;
                 }
                 State::Education(edu_builder) => {
+                    // Can definitely make this better.
                     if let Some(val) = line.strip_prefix("school:") {
                         *edu_builder = std::mem::take(edu_builder).school(val.trim());
                     } else if let Some(val) = line.strip_prefix("degree:") {
@@ -152,7 +155,6 @@ fn parse_content(content: &str) -> Result<Resume> {
                 }
                 State::Skills(skills_builder) => {
                     if let Some(val) = line.strip_prefix("languages:") {
-                        // Parse comma separated list
                         let list: Vec<String> = val
                             .split(',')
                             .map(|s| s.trim().to_string())
