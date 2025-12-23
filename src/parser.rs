@@ -1,4 +1,4 @@
-use crate::resume::{EducationBuilder, ExperienceBuilder, Resume, ResumeBuilder, SkillsBuilder};
+use crate::resume::{EducationBuilder, ExperienceBuilder, Resume, SkillsBuilder};
 use anyhow::{Context, Result};
 use std::fs;
 use std::path::Path;
@@ -14,11 +14,63 @@ pub fn parse_file(path: impl AsRef<Path>) -> Result<Resume> {
     parse_content(&content)
 }
 
-fn parse_content(content: &str) -> Result<Resume> {
-    let _builder = ResumeBuilder::default();
+#[derive(Debug)]
+enum Directive {
+    Name,
+    Email,
+    Phone,
+    Website,
+    Summary,
+    Skills,
+    Experience,
+    Education,
+}
 
-    // Parse line by line, but @directives start a block (like @experience).
-    // A simple state machine tracks what we are currently building.
+impl Directive {
+    fn from_line(line: &str) -> Option<(Self, &str)> {
+        let line = line.strip_prefix('@')?;
+
+        if let Some(rest) = line.strip_prefix("name:") {
+            Some((Self::Name, rest.trim()))
+        } else if let Some(rest) = line.strip_prefix("email:") {
+            Some((Self::Email, rest.trim()))
+        } else if let Some(rest) = line.strip_prefix("phone:") {
+            Some((Self::Phone, rest.trim()))
+        } else if let Some(rest) = line.strip_prefix("website:") {
+            Some((Self::Website, rest.trim()))
+        } else if let Some(rest) = line.strip_prefix("summary:") {
+            Some((Self::Summary, rest.trim()))
+        } else if line.starts_with("skills:") {
+            Some((Self::Skills, ""))
+        } else if line.starts_with("experience:") {
+            Some((Self::Experience, ""))
+        } else if line.starts_with("education:") {
+            Some((Self::Education, ""))
+        } else {
+            None
+        }
+    }
+}
+
+/// Helper to parse comma-separated values into a Vec<String>
+fn parse_csv(value: &str) -> Vec<String> {
+    value
+        .split(',')
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(String::from)
+        .collect()
+}
+
+/// Helper to parse date ranges like "2020 - 2023" or "2020"
+fn parse_date_range(date_str: &str) -> (String, Option<String>) {
+    date_str
+        .split_once('-')
+        .map(|(start, end)| (start.trim().to_string(), Some(end.trim().to_string())))
+        .unwrap_or_else(|| (date_str.to_string(), None))
+}
+
+fn parse_content(content: &str) -> Result<Resume> {
     enum State {
         Root,
         Experience(ExperienceBuilder),
@@ -26,166 +78,125 @@ fn parse_content(content: &str) -> Result<Resume> {
         Skills(SkillsBuilder),
     }
 
-    let mut state = State::Root;
-
-    // Helper to flush current state
-    let flush_state = |state: &mut State,
-                       experiences: &mut Vec<crate::resume::Experience>,
-                       educations: &mut Vec<crate::resume::Education>,
-                       skills: &mut Vec<crate::resume::Skills>| {
-        match std::mem::replace(state, State::Root) {
-            State::Skills(b) => skills.push(b.finish()),
-            State::Experience(b) => experiences.push(b.finish()),
-            State::Education(b) => educations.push(b.finish()),
-            State::Root => {}
+    impl State {
+        fn flush(
+            self,
+            experiences: &mut Vec<crate::resume::Experience>,
+            educations: &mut Vec<crate::resume::Education>,
+            skills: &mut Vec<crate::resume::Skills>,
+        ) {
+            match self {
+                State::Skills(b) => skills.push(b.finish()),
+                State::Experience(b) => experiences.push(b.finish()),
+                State::Education(b) => educations.push(b.finish()),
+                State::Root => {}
+            }
         }
-    };
+    }
 
+    let mut state = State::Root;
     let mut name = String::new();
     let mut email = String::new();
     let mut phone = None;
     let mut website = None;
     let mut summary = String::new();
     let mut skills = Vec::new();
-
     let mut experiences = Vec::new();
     let mut educations = Vec::new();
 
-    // Loop through lines
-    let lines: Vec<&str> = content.lines().collect();
-    let mut i = 0;
+    let mut lines = content.lines().map(str::trim).peekable();
 
-    while i < lines.len() {
-        let line = lines[i].trim();
-
+    while let Some(line) = lines.next() {
         if line.is_empty() {
-            i += 1;
             continue;
         }
 
-        // New @directive starting, flush previous block
-        if line.starts_with("@") {
-            flush_state(&mut state, &mut experiences, &mut educations, &mut skills);
-        }
+        if let Some((directive, rest)) = Directive::from_line(line) {
+            state.flush(&mut experiences, &mut educations, &mut skills);
 
-        // really dont like this, sure can make it better.
-        if line.starts_with("@skills:") {
-            state = State::Skills(SkillsBuilder::default());
-            i += 1;
-        } else if line.starts_with("@experience:") {
-            state = State::Experience(ExperienceBuilder::default());
-            i += 1;
-        } else if line.starts_with("@education:") {
-            state = State::Education(EducationBuilder::default());
-            i += 1;
-        } else if let Some(stripped) = line.strip_prefix("@name:") {
-            name = stripped.trim().to_string();
-            state = State::Root;
-            i += 1;
-        } else if let Some(stripped) = line.strip_prefix("@email:") {
-            email = stripped.trim().to_string();
-            state = State::Root;
-            i += 1;
-        } else if let Some(stripped) = line.strip_prefix("@phone:") {
-            phone = Some(stripped.trim().to_string());
-            state = State::Root;
-            i += 1;
-        } else if let Some(stripped) = line.strip_prefix("@website:") {
-            website = Some(stripped.trim().to_string());
-            state = State::Root;
-            i += 1;
-        } else if let Some(stripped) = line.strip_prefix("@summary:") {
-            state = State::Root;
-            i += 1;
-            let mut summary_lines = Vec::new();
-            if !stripped.trim().is_empty() {
-                summary_lines.push(stripped.trim());
-            }
-            while i < lines.len() && !lines[i].trim().starts_with("@") {
-                let l = lines[i].trim();
-                if !l.is_empty() {
-                    summary_lines.push(l);
+            match directive {
+                Directive::Name => {
+                    name = rest.to_string();
+                    state = State::Root;
                 }
-                i += 1;
+                Directive::Email => {
+                    email = rest.to_string();
+                    state = State::Root;
+                }
+                Directive::Phone => {
+                    phone = Some(rest.to_string());
+                    state = State::Root;
+                }
+                Directive::Website => {
+                    website = Some(rest.to_string());
+                    state = State::Root;
+                }
+                Directive::Summary => {
+                    state = State::Root;
+                    let mut summary_lines = Vec::new();
+                    if !rest.is_empty() {
+                        summary_lines.push(rest);
+                    }
+                    while let Some(&next_line) = lines.peek() {
+                        if next_line.starts_with('@') {
+                            break;
+                        }
+                        if let Some(line) = lines.next() {
+                            if !line.is_empty() {
+                                summary_lines.push(line);
+                            }
+                        }
+                    }
+                    summary = summary_lines.join("\n");
+                }
+                Directive::Skills => state = State::Skills(SkillsBuilder::default()),
+                Directive::Experience => state = State::Experience(ExperienceBuilder::default()),
+                Directive::Education => state = State::Education(EducationBuilder::default()),
             }
-            summary = summary_lines.join("\n");
         } else {
-            // Inside a block?
             match &mut state {
-                State::Root => {
-                    // Unknown root line, ignore or log
-                    i += 1;
-                }
-                State::Experience(exp_builder) => {
-                    // Parse experience key-values
-                    // Can definitely make this better.
+                State::Root => {}
+                State::Experience(builder) => {
                     if let Some(val) = line.strip_prefix("title:") {
-                        *exp_builder = std::mem::take(exp_builder).title(val.trim());
+                        *builder = std::mem::take(builder).title(val.trim());
                     } else if let Some(val) = line.strip_prefix("company:") {
-                        *exp_builder = std::mem::take(exp_builder).company(val.trim());
+                        *builder = std::mem::take(builder).company(val.trim());
                     } else if let Some(val) = line.strip_prefix("date:") {
-                        // Split start/end if possible "Start - End"
-                        let date_str = val.trim();
-                        if let Some((start, end)) = date_str.split_once("-") {
-                            *exp_builder = std::mem::take(exp_builder)
-                                .start(start.trim())
-                                .end(end.trim());
-                        } else {
-                            *exp_builder = std::mem::take(exp_builder).start(date_str);
+                        let (start, end) = parse_date_range(val.trim());
+                        *builder = std::mem::take(builder).start(&start);
+                        if let Some(end_date) = end {
+                            *builder = std::mem::take(builder).end(&end_date);
                         }
                     } else if let Some(val) = line.strip_prefix("description:") {
-                        *exp_builder = std::mem::take(exp_builder).description(val.trim());
-                    } else if let Some(val) = line.strip_prefix("-") {
-                        *exp_builder = std::mem::take(exp_builder).highlight(val.trim());
-                    } else {
-                        // assume part of previous description? or just ignore
+                        *builder = std::mem::take(builder).description(val.trim());
+                    } else if let Some(val) = line.strip_prefix('-') {
+                        *builder = std::mem::take(builder).highlight(val.trim());
                     }
-                    i += 1;
                 }
-                State::Education(edu_builder) => {
-                    // Can definitely make this better.
+                State::Education(builder) => {
                     if let Some(val) = line.strip_prefix("school:") {
-                        *edu_builder = std::mem::take(edu_builder).school(val.trim());
+                        *builder = std::mem::take(builder).school(val.trim());
                     } else if let Some(val) = line.strip_prefix("degree:") {
-                        *edu_builder = std::mem::take(edu_builder).degree(val.trim());
+                        *builder = std::mem::take(builder).degree(val.trim());
                     } else if let Some(val) = line.strip_prefix("year:") {
-                        *edu_builder = std::mem::take(edu_builder).year(val.trim());
+                        *builder = std::mem::take(builder).year(val.trim());
                     }
-                    i += 1;
                 }
-                State::Skills(skills_builder) => {
+                State::Skills(builder) => {
                     if let Some(val) = line.strip_prefix("languages:") {
-                        let list: Vec<String> = val
-                            .split(',')
-                            .map(|s| s.trim().to_string())
-                            .filter(|s| !s.is_empty())
-                            .collect();
-                        *skills_builder = std::mem::take(skills_builder).languages(list);
+                        *builder = std::mem::take(builder).languages(parse_csv(val));
                     } else if let Some(val) = line.strip_prefix("frameworks:") {
-                        let list: Vec<String> = val
-                            .split(',')
-                            .map(|s| s.trim().to_string())
-                            .filter(|s| !s.is_empty())
-                            .collect();
-                        *skills_builder = std::mem::take(skills_builder).frameworks(list);
+                        *builder = std::mem::take(builder).frameworks(parse_csv(val));
                     } else if let Some(val) = line.strip_prefix("tools:") {
-                        let list: Vec<String> = val
-                            .split(',')
-                            .map(|s| s.trim().to_string())
-                            .filter(|s| !s.is_empty())
-                            .collect();
-                        *skills_builder = std::mem::take(skills_builder).tools(list);
+                        *builder = std::mem::take(builder).tools(parse_csv(val));
                     }
-                    i += 1;
                 }
             }
         }
     }
 
-    // Final flush
-    flush_state(&mut state, &mut experiences, &mut educations, &mut skills);
+    state.flush(&mut experiences, &mut educations, &mut skills);
 
-    // Construct final resume
     let mut builder = Resume::build().name(&name).email(&email);
 
     if let Some(p) = phone {
@@ -201,12 +212,6 @@ fn parse_content(content: &str) -> Result<Resume> {
     for s in skills {
         builder = builder.merge_skills(s);
     }
-
-    // We need to extend the builder to accept pre-built objects or reconstruct them.
-    // The current builder uses closures.
-    // Limitation of the current builder API: It expects closures for experience/education.
-    // Let's modify the builder in `resume.rs` to allow adding structs directly, or access fields.
-    // Actually, we can just use the existing closure API by moving the data in.
 
     for exp in experiences {
         builder = builder.experience(move |mut b| {
@@ -228,9 +233,8 @@ fn parse_content(content: &str) -> Result<Resume> {
     }
 
     for edu in educations {
-        builder = builder.education(move |mut b| {
-            b = b.school(&edu.school).degree(&edu.degree).year(&edu.year);
-            b
+        builder = builder.education(move |b| {
+            b.school(&edu.school).degree(&edu.degree).year(&edu.year)
         });
     }
 

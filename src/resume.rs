@@ -29,17 +29,6 @@ impl Skills {
         self.languages.is_empty() && self.frameworks.is_empty() && self.tools.is_empty()
     }
 
-    pub fn add_language(&mut self, lang: String) {
-        self.languages.push(lang)
-    }
-
-    pub fn add_framework(&mut self, framework: String) {
-        self.frameworks.push(framework)
-    }
-    pub fn add_tool(&mut self, tool: String) {
-        self.tools.push(tool)
-    }
-
     pub fn merge(&mut self, other: Skills) {
         self.languages.extend(other.languages);
         self.frameworks.extend(other.frameworks);
@@ -112,31 +101,6 @@ impl ResumeBuilder {
         self
     }
 
-    /// Adds a skill(language) to the resume.
-    pub fn language(mut self, skill: &str) -> Self {
-        self.resume.skills.add_language(skill.to_string());
-        self
-    }
-
-    /// Adds a skill(tool) to the resume.
-    pub fn tool(mut self, skill: &str) -> Self {
-        self.resume.skills.add_tool(skill.to_string());
-        self
-    }
-
-    /// Adds a skill(framework) to the resume.
-    pub fn framework(mut self, skill: &str) -> Self {
-        self.resume.skills.add_framework(skill.to_string());
-        self
-    }
-    /// Adds multiple skills at once.
-    // pub fn skills(mut self, skills: &[&str]) -> Self {
-    //     for s in skills {
-    //         self.resume.skills.push(s.to_string());
-    //     }
-    //     self
-    // }
-
     /// Adds an experience section using a closure to build the Experience object.
     /// This allows for a nested DSL structure.
     pub fn experience<F>(mut self, build: F) -> Self
@@ -198,11 +162,6 @@ impl ExperienceBuilder {
         self
     }
 
-    pub fn current(mut self) -> Self {
-        self.experience.end_date = Some("Present".to_string());
-        self
-    }
-
     pub fn description(mut self, desc: &str) -> Self {
         self.experience.description = Some(desc.to_string());
         self
@@ -253,17 +212,17 @@ pub struct SkillsBuilder {
 
 impl SkillsBuilder {
     pub fn languages(mut self, languages: Vec<String>) -> Self {
-        self.skills.languages = languages.into_iter().map(|x| x).collect();
+        self.skills.languages = languages;
         self
     }
 
     pub fn frameworks(mut self, frameworks: Vec<String>) -> Self {
-        self.skills.frameworks = frameworks.into_iter().map(|x| x).collect();
+        self.skills.frameworks = frameworks;
         self
     }
 
     pub fn tools(mut self, tools: Vec<String>) -> Self {
-        self.skills.tools = tools.into_iter().map(|x| x).collect();
+        self.skills.tools = tools;
         self
     }
 
