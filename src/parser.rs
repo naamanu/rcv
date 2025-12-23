@@ -1,4 +1,4 @@
-use crate::resume::{EducationBuilder, ExperienceBuilder, Resume, ResumeBuilder};
+use crate::resume::{EducationBuilder, ExperienceBuilder, Resume, ResumeBuilder, SkillsBuilder};
 use anyhow::{Context, Result};
 use std::fs;
 use std::path::Path;
@@ -15,40 +15,26 @@ pub fn parse_file(path: impl AsRef<Path>) -> Result<Resume> {
 }
 
 fn parse_content(content: &str) -> Result<Resume> {
-    let builder = ResumeBuilder::default();
+    let _builder = ResumeBuilder::default();
 
-    // We parse line by line, but some directives start a block (like @experience).
-    // This simple state machine tracks what we are currently building.
+    // Parse line by line, but @directives start a block (like @experience).
+    // A simple state machine tracks what we are currently building.
     enum State {
         Root,
         Experience(ExperienceBuilder),
         Education(EducationBuilder),
+        Skills(SkillsBuilder),
     }
 
     let mut state = State::Root;
 
-    // Helper to finish the current block and add it to the resume builder
-    // We use a macro or closure to avoid borrowing issues, or just handle it iteratively.
-    // Since builders consume self, we need to be careful.
-    // simpler approach: modify a mutable Resume object directly?
-    // Our Builder consumes self, which is great for chaining but harder for state parsing loop.
-    // Let's modify the Builder to allow holding intermediate state?
-    // Or we just gather structs and add them at the end.
-    // Actually, ResumeBuilder can hold `resume`. We can't access it easily if we consume it.
-    // Let's rely on the internal `Resume` struct being accessible or just use the `field` methods?
-
-    // Refactor: Let's assume we can access the underlying resume in the builder or just build side-lists.
-    // Note: The public API of ResumeBuilder consumes self.
-    // To keep it simple, let's collect the components separately and use the builder at the end or
-    // fundamentally, we can change the parse strategy to collecting `sections`.
-
-    // Let's parse into a temporary structure or direct fields.
-    // Since we are inside the crate, we *could* modify Resume directly if fields are pub, which they are.
     // Helper to flush current state
     let flush_state = |state: &mut State,
                        experiences: &mut Vec<crate::resume::Experience>,
-                       educations: &mut Vec<crate::resume::Education>| {
+                       educations: &mut Vec<crate::resume::Education>,
+                       skills: &mut Vec<crate::resume::Skills>| {
         match std::mem::replace(state, State::Root) {
+            State::Skills(b) => skills.push(b.finish()),
             State::Experience(b) => experiences.push(b.finish()),
             State::Education(b) => educations.push(b.finish()),
             State::Root => {}
@@ -79,10 +65,13 @@ fn parse_content(content: &str) -> Result<Resume> {
 
         if line.starts_with("@") {
             // New directive starting, flush previous block
-            flush_state(&mut state, &mut experiences, &mut educations);
+            flush_state(&mut state, &mut experiences, &mut educations, &mut skills);
         }
 
-        if line.starts_with("@experience:") {
+        if line.starts_with("@skills:") {
+            state = State::Skills(SkillsBuilder::default());
+            i += 1;
+        } else if line.starts_with("@experience:") {
             state = State::Experience(ExperienceBuilder::default());
             i += 1;
         } else if line.starts_with("@education:") {
@@ -119,27 +108,6 @@ fn parse_content(content: &str) -> Result<Resume> {
                 i += 1;
             }
             summary = summary_lines.join("\n");
-        } else if let Some(stripped) = line.strip_prefix("@skills:") {
-            state = State::Root;
-            i += 1;
-            let mut skill_text = stripped.trim().to_string();
-            while i < lines.len() && !lines[i].trim().starts_with("@") {
-                let l = lines[i].trim();
-                if !l.is_empty() {
-                    if !skill_text.is_empty() {
-                        skill_text.push_str(", ");
-                    }
-                    skill_text.push_str(l);
-                }
-                i += 1;
-            }
-
-            for s in skill_text.split(',') {
-                let s = s.trim();
-                if !s.is_empty() {
-                    skills.push(s.to_string());
-                }
-            }
         } else {
             // Inside a block?
             match &mut state {
@@ -182,12 +150,38 @@ fn parse_content(content: &str) -> Result<Resume> {
                     }
                     i += 1;
                 }
+                State::Skills(skills_builder) => {
+                    if let Some(val) = line.strip_prefix("languages:") {
+                        // Parse comma separated list
+                        let list: Vec<String> = val
+                            .split(',')
+                            .map(|s| s.trim().to_string())
+                            .filter(|s| !s.is_empty())
+                            .collect();
+                        *skills_builder = std::mem::take(skills_builder).languages(list);
+                    } else if let Some(val) = line.strip_prefix("frameworks:") {
+                        let list: Vec<String> = val
+                            .split(',')
+                            .map(|s| s.trim().to_string())
+                            .filter(|s| !s.is_empty())
+                            .collect();
+                        *skills_builder = std::mem::take(skills_builder).frameworks(list);
+                    } else if let Some(val) = line.strip_prefix("tools:") {
+                        let list: Vec<String> = val
+                            .split(',')
+                            .map(|s| s.trim().to_string())
+                            .filter(|s| !s.is_empty())
+                            .collect();
+                        *skills_builder = std::mem::take(skills_builder).tools(list);
+                    }
+                    i += 1;
+                }
             }
         }
     }
 
     // Final flush
-    flush_state(&mut state, &mut experiences, &mut educations);
+    flush_state(&mut state, &mut experiences, &mut educations, &mut skills);
 
     // Construct final resume
     let mut builder = Resume::build().name(&name).email(&email);
@@ -202,7 +196,9 @@ fn parse_content(content: &str) -> Result<Resume> {
         builder = builder.summary(&summary);
     }
 
-    builder = builder.skills(&skills.iter().map(|s| s.as_str()).collect::<Vec<_>>());
+    for s in skills {
+        builder = builder.merge_skills(s);
+    }
 
     // We need to extend the builder to accept pre-built objects or reconstruct them.
     // The current builder uses closures.
