@@ -1,4 +1,4 @@
-use crate::resume::{EducationBuilder, ExperienceBuilder, Resume, SkillsBuilder};
+use crate::resume::{EducationBuilder, ExperienceBuilder, ProjectBuilder, Resume, SkillsBuilder};
 use anyhow::{Context, Result};
 use std::fs;
 use std::path::Path;
@@ -24,6 +24,7 @@ enum Directive {
     Skills,
     Experience,
     Education,
+    Projects,
 }
 
 impl Directive {
@@ -46,6 +47,8 @@ impl Directive {
             Some((Self::Experience, ""))
         } else if line.starts_with("education:") {
             Some((Self::Education, ""))
+        } else if line.starts_with("projects:") {
+            Some((Self::Projects, ""))
         } else {
             None
         }
@@ -76,6 +79,7 @@ fn parse_content(content: &str) -> Result<Resume> {
         Experience(ExperienceBuilder),
         Education(EducationBuilder),
         Skills(SkillsBuilder),
+        Projects(ProjectBuilder),
     }
 
     impl State {
@@ -84,11 +88,13 @@ fn parse_content(content: &str) -> Result<Resume> {
             experiences: &mut Vec<crate::resume::Experience>,
             educations: &mut Vec<crate::resume::Education>,
             skills: &mut Vec<crate::resume::Skills>,
+            projects: &mut Vec<crate::resume::Project>,
         ) {
             match self {
                 State::Skills(b) => skills.push(b.finish()),
                 State::Experience(b) => experiences.push(b.finish()),
                 State::Education(b) => educations.push(b.finish()),
+                State::Projects(b) => projects.push(b.finish()),
                 State::Root => {}
             }
         }
@@ -103,6 +109,7 @@ fn parse_content(content: &str) -> Result<Resume> {
     let mut skills = Vec::new();
     let mut experiences = Vec::new();
     let mut educations = Vec::new();
+    let mut projects = Vec::new();
 
     let mut lines = content.lines().map(str::trim).peekable();
 
@@ -112,7 +119,7 @@ fn parse_content(content: &str) -> Result<Resume> {
         }
 
         if let Some((directive, rest)) = Directive::from_line(line) {
-            state.flush(&mut experiences, &mut educations, &mut skills);
+            state.flush(&mut experiences, &mut educations, &mut skills, &mut projects);
 
             match directive {
                 Directive::Name => {
@@ -152,6 +159,7 @@ fn parse_content(content: &str) -> Result<Resume> {
                 Directive::Skills => state = State::Skills(SkillsBuilder::default()),
                 Directive::Experience => state = State::Experience(ExperienceBuilder::default()),
                 Directive::Education => state = State::Education(EducationBuilder::default()),
+                Directive::Projects => state = State::Projects(ProjectBuilder::default()),
             }
         } else {
             match &mut state {
@@ -191,11 +199,20 @@ fn parse_content(content: &str) -> Result<Resume> {
                         *builder = std::mem::take(builder).tools(parse_csv(val));
                     }
                 }
+                State::Projects(builder) => {
+                    if let Some(val) = line.strip_prefix("name:") {
+                        *builder = std::mem::take(builder).name(val.trim());
+                    } else if let Some(val) = line.strip_prefix("url:") {
+                        *builder = std::mem::take(builder).url(val.trim());
+                    } else if let Some(val) = line.strip_prefix("description:") {
+                        *builder = std::mem::take(builder).description(val.trim());
+                    }
+                }
             }
         }
     }
 
-    state.flush(&mut experiences, &mut educations, &mut skills);
+    state.flush(&mut experiences, &mut educations, &mut skills, &mut projects);
 
     let mut builder = Resume::build().name(&name).email(&email);
 
@@ -235,6 +252,16 @@ fn parse_content(content: &str) -> Result<Resume> {
     for edu in educations {
         builder = builder.education(move |b| {
             b.school(&edu.school).degree(&edu.degree).year(&edu.year)
+        });
+    }
+
+    for proj in projects {
+        builder = builder.project(move |mut b| {
+            b = b.name(&proj.name).description(&proj.description);
+            if let Some(url) = &proj.url {
+                b = b.url(url);
+            }
+            b
         });
     }
 
