@@ -41,9 +41,9 @@ pub fn export_to_pdf(resume: &Resume, output_file: &str) -> Result<()> {
     let mut doc = genpdf::Document::new(font_family);
     doc.set_title(format!("Resume - {}", resume.name));
 
-    // Customize the page layout
+    // Customize the page layout with narrower margins for more content width
     let mut decorator = SimplePageDecorator::new();
-    decorator.set_margins(12);
+    decorator.set_margins(20);
     doc.set_page_decorator(decorator);
 
     // --- Header ---
@@ -67,33 +67,36 @@ pub fn export_to_pdf(resume: &Resume, output_file: &str) -> Result<()> {
     contact_para.set_alignment(genpdf::Alignment::Center);
     doc.push(contact_para.styled(style::Style::new().with_font_size(10)));
 
-    doc.push(elements::Break::new(2.0));
-
     // --- Summary ---
     if let Some(summary) = &resume.summary {
         doc.push(section_header("Summary"));
-        doc.push(elements::Paragraph::new(summary));
-        doc.push(elements::Break::new(1.0));
+        doc.push(
+            elements::Paragraph::new(summary)
+                .styled(style::Style::new().with_font_size(10)),
+        );
     }
 
     // --- Skills ---
     if !resume.skills.is_empty() {
         doc.push(section_header("Skills"));
 
+        let mut skill_parts = Vec::new();
         if !resume.skills.languages.is_empty() {
-            let text = format!("Languages: {}", resume.skills.languages.join(", "));
-            doc.push(elements::Paragraph::new(text));
+            skill_parts.push(format!("Languages: {}", resume.skills.languages.join(", ")));
         }
         if !resume.skills.frameworks.is_empty() {
-            let text = format!("Frameworks: {}", resume.skills.frameworks.join(", "));
-            doc.push(elements::Paragraph::new(text));
+            skill_parts.push(format!("Frameworks: {}", resume.skills.frameworks.join(", ")));
         }
         if !resume.skills.tools.is_empty() {
-            let text = format!("Tools: {}", resume.skills.tools.join(", "));
-            doc.push(elements::Paragraph::new(text));
+            skill_parts.push(format!("Tools: {}", resume.skills.tools.join(", ")));
         }
 
-        doc.push(elements::Break::new(1.0));
+        if !skill_parts.is_empty() {
+            doc.push(
+                elements::Paragraph::new(skill_parts.join(" | "))
+                    .styled(style::Style::new().with_font_size(10)),
+            );
+        }
     }
 
     // --- Experience ---
@@ -101,29 +104,32 @@ pub fn export_to_pdf(resume: &Resume, output_file: &str) -> Result<()> {
         doc.push(section_header("Experience"));
 
         for exp in &resume.experience {
-            let title_text = format!("{} @ {}", exp.title, exp.company);
-            let title_para = elements::Paragraph::new(title_text);
-            doc.push(title_para.styled(style::Style::new().bold().with_font_size(11)));
+            // Title and company
+            let title_text = format!("{}, {}", exp.title, exp.company);
+            doc.push(
+                elements::Paragraph::new(title_text)
+                    .styled(style::Style::new().bold().with_font_size(10)),
+            );
 
+            // Date and location on same line
             let date_text = match &exp.end_date {
                 Some(end) => format!("{} - {}", exp.start_date, end),
                 None => exp.start_date.clone(),
             };
-            let date_para = elements::Paragraph::new(date_text);
+            let meta_text = match &exp.description {
+                Some(location) => format!("{} | {}", location, date_text),
+                None => date_text,
+            };
             doc.push(
-                date_para.styled(
+                elements::Paragraph::new(meta_text).styled(
                     style::Style::new()
                         .italic()
-                        .with_color(style::Color::Rgb(100, 100, 100))
+                        .with_color(style::Color::Rgb(80, 80, 80))
                         .with_font_size(10),
                 ),
             );
 
-            if let Some(desc) = &exp.description {
-                let desc_para = elements::Paragraph::new(desc);
-                doc.push(desc_para.styled(style::Style::new().with_font_size(10)));
-            }
-
+            // Bullet points
             if !exp.highlights.is_empty() {
                 let mut list = elements::UnorderedList::new();
                 for highlight in &exp.highlights {
@@ -135,7 +141,7 @@ pub fn export_to_pdf(resume: &Resume, output_file: &str) -> Result<()> {
                 doc.push(list);
             }
 
-            doc.push(elements::Break::new(1.0));
+            doc.push(elements::Break::new(0.5));
         }
     }
 
@@ -143,8 +149,40 @@ pub fn export_to_pdf(resume: &Resume, output_file: &str) -> Result<()> {
     if !resume.education.is_empty() {
         doc.push(section_header("Education"));
         for edu in &resume.education {
-            let text = format!("{}, {} ({})", edu.school, edu.degree, edu.year);
-            doc.push(elements::Paragraph::new(text));
+            // Degree
+            doc.push(
+                elements::Paragraph::new(&edu.degree)
+                    .styled(style::Style::new().bold().with_font_size(10)),
+            );
+            // School and year
+            let meta_text = format!("{} | {}", edu.school, edu.year);
+            doc.push(
+                elements::Paragraph::new(meta_text).styled(
+                    style::Style::new()
+                        .italic()
+                        .with_color(style::Color::Rgb(80, 80, 80))
+                        .with_font_size(10),
+                ),
+            );
+            doc.push(elements::Break::new(0.5));
+        }
+    }
+
+    // --- Notable Projects ---
+    if !resume.projects.is_empty() {
+        doc.push(section_header("Notable Projects"));
+        for proj in &resume.projects {
+            // Project name (bold)
+            doc.push(
+                elements::Paragraph::new(&proj.name)
+                    .styled(style::Style::new().bold().with_font_size(10)),
+            );
+            // Description
+            doc.push(
+                elements::Paragraph::new(&proj.description)
+                    .styled(style::Style::new().with_font_size(10)),
+            );
+            doc.push(elements::Break::new(0.5));
         }
     }
 
@@ -158,10 +196,10 @@ pub fn export_to_pdf(resume: &Resume, output_file: &str) -> Result<()> {
 
 fn section_header(text: &str) -> elements::LinearLayout {
     let mut layout = elements::LinearLayout::vertical();
-    layout.push(elements::Break::new(0.5));
+    layout.push(elements::Break::new(1.0));
     layout.push(
-        elements::Paragraph::new(text)
-            .styled(style::Style::new().bold().with_font_size(14))
+        elements::Paragraph::new(text.to_uppercase())
+            .styled(style::Style::new().bold().with_font_size(11)),
     );
     layout.push(elements::Break::new(0.5));
     layout

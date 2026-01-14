@@ -1,58 +1,78 @@
 @name: Nana Adjei Manu
-@email: nana@example.com
-@phone: +1-555-0102
-@website: https://nanamanu.com
+@email: n.k.a.manu06@gmail.com
+@phone: +49-171-9056224
+@website: nanamanu.com | GitHub
 
 @summary:
-Senior Software Engineer with a passion for Rust, Distributed Systems, and AI.
-Proven track record of building scalable applications.
+Senior Software Engineer with 5+ years of experience building high-performance web applications, observability platforms, and developer tooling.
 
 @skills:
-languages: TypeScript, Rust, Go, Python, Ocaml, Haskell, C/C++, Elm
-tools: Git, Docker, Kubernetes, AWS, Terraform, Linux
-frameworks: React, Next.js, Node.js, FastAPI,  Flask, Rescript, ReasonML
+languages: TypeScript, JavaScript, Ruby, Python, Go, C/C++, OCaml, SQL, Haskell, Rust
+frameworks: React, Redux, Ember.js, Tailwind CSS, Ruby on Rails, GraphQL, FastAPI, Node.js
+infrastructure: Docker, Kubernetes, AWS, GCP, Redis, PostgreSQL, GitHub Actions, CI/CD
 
 @experience:
-title: Senior Software Engineer
-company: Uber
-date: Sep 2018 - Present
-description: Amsterdam, Netherlands
-- Results, impact and your contribution.
-- Add at numbers to the impact, use active languages and mention specifics like the languages used.
-- The more recent the position, the more details you usually want to share.
-- Lorem ipsum dolor sit amet 40%, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-- Ut enim ad minim veniam 100, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo.
+title: Senior Frontend Engineer
+company: SuitePad GmbH
+date: July 2025 - Present
+description: Berlin, Germany
+- Led end-to-end development of AI Concierge feature, integrating dashboard APIs, real-time chat suggestions, markdown rendering, and tablet-optimized UX—delivering a production-ready conversational AI experience for hotel guests
+- Drove large-scale Ember.js modernization effort, resolving 20+ deprecation categories (router, data layer, concurrency patterns, component co-location) across 140 commits to prepare the codebase for major framework upgrades
+- Established frontend engineering standards by implementing custom ESLint plugin, pre-commit hooks with Husky/lint-staged, multi-stage Docker builds, and enhanced EditorConfig—improving code quality enforcement and CI efficiency
 
 @experience:
-title: Software Engineer II
-company: Skyscanner
-date: 2017 - 2018
-description: London, UK
-- Results, impact and your contribution
-- Lorem ipsum dolor sit amet 40%, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-- Ut enim ad minim veniam 100, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo.
+title: Senior Product Engineer
+company: Ravka
+date: Jan 2024 - July 2025
+description: Rotterdam, Netherlands
+- Pioneered BearSignals, an intelligent observability platform inspired by the academic STEAM paper, designing a cohesive architecture with a Go ingestion engine, Python analytics layer, and React frontend for stateful, seamless monitoring
+- Engineered a high-throughput data pipeline and automated root cause analysis services, providing developers with actionable insights and reducing system debugging time
 
 @experience:
-title: Software Developer
-company: Skype
-date: 2015 - 2017
-description: London, UK
-- Results, impact and your contribution
-- As the position is more in the past, you’ll want to be mindful of how much details you add, and what you call out. You want to make sure there’s space on all the key details on the first page.
+title: Senior Frontend Engineer
+company: HousingAnywhere
+date: April 2022 - Jan 2024
+description: Rotterdam, Netherlands
+- Engineered a complete overhaul of front-end search infrastructure using React and TypeScript, directly leading to a 35% increase in search-to-booking conversion
+- Improved core UI search performance by 40% through incremental prefetching and caching, reducing average page load time for millions of users
+- Architected and developed a full-stack feature flagging console (React, TypeScript, Go), enabling product teams to self-manage A/B tests and cutting experiment result retrieval from days to minutes
+
+@experience:
+title: Senior Software Engineer (Contract)
+company: Andela
+date: May 2021 - Dec 2023
+description: New York, US (Remote)
+- SayRhino: Architected fault-tolerant, event-driven system using Sidekiq and Redis to scale post-fulfillment operations; refactored legacy React codebase into modular design system with Tailwind CSS, cutting maintenance time by 25%
+- Leafly Inc: Spearheaded critical Ruby on Rails upgrade (2.5 to 3.0), enhancing system performance and security; engineered scalable GraphQL APIs reducing backend query times by over 30%
 
 @experience:
 title: Software Engineer
-company: LogMeIn
-date: Summer 2014
-description: London, UK
-- Results, impact and your contribution. The further in the past a position is, often the less important its details.
+company: Petra Trust
+date: Dec 2019 - Jan 2021
+description: Accra, Ghana
+- Architected and developed "Phoenix" unified CRM by designing cross-functional GraphQL API (Ruby, PostgreSQL) and responsive UI (React, TypeScript), reducing user task completion time by 25%
 
 @education:
-school: University of Munich
-degree: MSc Computer Science
-year: 2013 - 2014
+school: University of Leicester, UK
+degree: Master of Science in Advanced Computer Science (Distinction)
+year: 2019
 
-@education:
-school: Budapest University of Technology & Economics
-degree: BSc Computer Science
-year: 2010 - 2013
+@projects:
+name: RTPL
+url: https://github.com/claeusdev/rtpipe
+description: High-performance real-time market data processing system for low-latency trading applications
+
+@projects:
+name: L-Language
+url: https://github.com/claeusdev/l-lang
+description: Minimal functional programming language implementation (Haskell, React)
+
+@projects:
+name: SQLL
+url: https://github.com/claeusdev/sqll
+description: Open-source SQL client library for Python using SQLite
+
+@projects:
+name: PRICC
+url: https://github.com/claeusdev/pricc
+description: Open-source C project generator written in Rust

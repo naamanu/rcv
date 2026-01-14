@@ -14,6 +14,7 @@ pub struct Resume {
     pub experience: Vec<Experience>,
     pub education: Vec<Education>,
     pub skills: Skills,
+    pub projects: Vec<Project>,
 }
 
 /// Represents a set of skills.
@@ -53,6 +54,14 @@ pub struct Education {
     pub school: String,
     pub degree: String,
     pub year: String,
+}
+
+/// Represents a notable project.
+#[derive(Debug, Default, Clone)]
+pub struct Project {
+    pub name: String,
+    pub url: Option<String>,
+    pub description: String,
 }
 
 // --- Builder Implementation (The DSL) ---
@@ -126,6 +135,17 @@ impl ResumeBuilder {
 
     pub fn merge_skills(mut self, skills: Skills) -> Self {
         self.resume.skills.merge(skills);
+        self
+    }
+
+    /// Adds a project section using a closure.
+    pub fn project<F>(mut self, build: F) -> Self
+    where
+        F: FnOnce(ProjectBuilder) -> ProjectBuilder,
+    {
+        let builder = ProjectBuilder::default();
+        let proj = build(builder).finish();
+        self.resume.projects.push(proj);
         self
     }
 
@@ -231,6 +251,33 @@ impl SkillsBuilder {
     }
 }
 
+/// A builder struct for Project
+#[derive(Default)]
+pub struct ProjectBuilder {
+    project: Project,
+}
+
+impl ProjectBuilder {
+    pub fn name(mut self, name: &str) -> Self {
+        self.project.name = name.to_string();
+        self
+    }
+
+    pub fn url(mut self, url: &str) -> Self {
+        self.project.url = Some(url.to_string());
+        self
+    }
+
+    pub fn description(mut self, description: &str) -> Self {
+        self.project.description = description.to_string();
+        self
+    }
+
+    pub fn finish(self) -> Project {
+        self.project
+    }
+}
+
 // --- Output Formatting ---
 
 impl fmt::Display for Resume {
@@ -297,6 +344,18 @@ impl fmt::Display for Resume {
             writeln!(f, "## Education")?;
             for edu in &self.education {
                 writeln!(f, "**{}**, {} ({})", edu.school, edu.degree, edu.year)?;
+            }
+        }
+
+        // Projects
+        if !self.projects.is_empty() {
+            writeln!(f, "\n## Notable Projects")?;
+            for proj in &self.projects {
+                if let Some(url) = &proj.url {
+                    writeln!(f, "**[{}]({})**: {}", proj.name, url, proj.description)?;
+                } else {
+                    writeln!(f, "**{}**: {}", proj.name, proj.description)?;
+                }
             }
         }
 
