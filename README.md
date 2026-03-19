@@ -58,6 +58,48 @@ degree: Bachelor of Science in Computer Science
 year: 2016 - 2020
 ```
 
+## Example Run
+
+Below is a demonstration of the RCV CLI converting a `.rcv` file to a finished format:
+
+```bash
+$ cargo run -- resume.rcv
+Parsing resume from resume.rcv...
+# John Doe
+
+**Email:** john.doe@example.com | **Phone:** +1-234-567-8900 | **Web:** https://johndoe.com
+
+## Summary
+A highly motivated Software Engineer with a passion for Rust and declarative formatting.
+
+## Skills
+#### Languages
+Rust, Python, JavaScript
+
+## Experience
+### Software Engineer @ Example Corp (2020) - Present
+
+_Remote_
+
+- Built an internal PDF generation service that reduced rendering time by 80%.
+- Migrated legacy microservices from Java to Axum (Rust).
+
+## Education
+**State University**, BSc Computer Science (2016 - 2020)
+
+Loading system fonts...
+Rendering PDF to resume.pdf...
+Successfully generated resume.pdf
+```
+*Screenshot: The `cargo run` text output, representing a standard resume build pipeline.*
+
+## Documentation
+
+For a comprehensive breakdown of how RCV operates under the hood, visit the specific guides in our `docs/` repository:
+- [Format Guide](docs/format.md): Syntax references for `.rcv` files.
+- [Usage Guide](docs/usage.md): Instructions on CLI functionality and options.
+- [Architecture](docs/architecture.md): A look into the pipeline, DSL builders, and parser implementations.
+
 ## File Structure
 
 - `src/main.rs` - Entry point and CLI handling
