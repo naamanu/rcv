@@ -141,10 +141,10 @@ fn parse_content(content: &str) -> Result<Resume> {
                         if next_line.starts_with('@') {
                             break;
                         }
-                        if let Some(line) = lines.next() {
-                            if !line.is_empty() {
-                                summary_lines.push(line);
-                            }
+                        if let Some(line) = lines.next()
+                            && !line.is_empty()
+                        {
+                            summary_lines.push(line);
                         }
                     }
                     summary = summary_lines.join("\n");
@@ -233,10 +233,111 @@ fn parse_content(content: &str) -> Result<Resume> {
     }
 
     for edu in educations {
-        builder = builder.education(move |b| {
-            b.school(&edu.school).degree(&edu.degree).year(&edu.year)
-        });
+        builder =
+            builder.education(move |b| b.school(&edu.school).degree(&edu.degree).year(&edu.year));
     }
 
     Ok(builder.finish())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{parse_content, parse_csv, parse_date_range};
+
+    #[test]
+    fn parse_csv_trims_and_discards_empty_values() {
+        assert_eq!(
+            parse_csv("Rust,  Python ,, Go "),
+            vec!["Rust", "Python", "Go"]
+        );
+    }
+
+    #[test]
+    fn parse_date_range_supports_single_value_and_ranges() {
+        assert_eq!(
+            parse_date_range("2020 - Present"),
+            ("2020".to_string(), Some("Present".to_string()))
+        );
+        assert_eq!(parse_date_range("2020"), ("2020".to_string(), None));
+    }
+
+    #[test]
+    fn parses_complete_resume_content() {
+        let resume = parse_content(
+            r#"
+@name: Jane Doe
+@email: jane@example.com
+@phone: +49-555-0100
+@website: https://example.com
+
+@summary:
+Builder-focused Rust engineer.
+Writes maintainable tooling.
+
+@skills:
+languages: Rust, Python
+frameworks: Axum
+tools: Cargo, Git
+
+@experience:
+title: Staff Engineer
+company: Example Co
+date: 2022 - Present
+description: Berlin, Germany
+- Shipped internal developer tooling
+- Reduced release friction
+
+@education:
+school: Example University
+degree: BSc Computer Science
+year: 2018
+"#,
+        )
+        .expect("content should parse");
+
+        assert_eq!(resume.name, "Jane Doe");
+        assert_eq!(resume.email, "jane@example.com");
+        assert_eq!(resume.phone.as_deref(), Some("+49-555-0100"));
+        assert_eq!(resume.website.as_deref(), Some("https://example.com"));
+        assert_eq!(
+            resume.summary.as_deref(),
+            Some("Builder-focused Rust engineer.\nWrites maintainable tooling.")
+        );
+        assert_eq!(resume.skills.languages, vec!["Rust", "Python"]);
+        assert_eq!(resume.skills.frameworks, vec!["Axum"]);
+        assert_eq!(resume.skills.tools, vec!["Cargo", "Git"]);
+        assert_eq!(resume.experience.len(), 1);
+        assert_eq!(resume.experience[0].title, "Staff Engineer");
+        assert_eq!(resume.experience[0].company, "Example Co");
+        assert_eq!(resume.experience[0].start_date, "2022");
+        assert_eq!(resume.experience[0].end_date.as_deref(), Some("Present"));
+        assert_eq!(
+            resume.experience[0].highlights,
+            vec![
+                "Shipped internal developer tooling",
+                "Reduced release friction"
+            ]
+        );
+        assert_eq!(resume.education.len(), 1);
+        assert_eq!(resume.education[0].school, "Example University");
+    }
+
+    #[test]
+    fn summary_stops_at_next_directive() {
+        let resume = parse_content(
+            r#"
+@name: Jane Doe
+@email: jane@example.com
+@summary:
+First line
+Second line
+@skills:
+languages: Rust
+"#,
+        )
+        .expect("content should parse");
+
+        assert_eq!(resume.summary.as_deref(), Some("First line\nSecond line"));
+        assert_eq!(resume.skills.languages, vec!["Rust"]);
+    }
 }

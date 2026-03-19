@@ -303,3 +303,49 @@ impl fmt::Display for Resume {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{Resume, Skills};
+
+    #[test]
+    fn display_renders_markdown_sections_for_populated_resume() {
+        let resume = Resume::build()
+            .name("Jane Doe")
+            .email("jane@example.com")
+            .phone("+49-555-0100")
+            .website("https://example.com")
+            .summary("Builds reliable developer tools.")
+            .merge_skills(Skills {
+                languages: vec!["Rust".to_string()],
+                frameworks: vec!["Axum".to_string()],
+                tools: vec!["Cargo".to_string()],
+            })
+            .experience(|b| {
+                b.title("Staff Engineer")
+                    .company("Example Co")
+                    .start("2022")
+                    .end("Present")
+                    .description("Berlin, Germany")
+                    .highlight("Reduced release friction")
+            })
+            .education(|b| {
+                b.school("Example University")
+                    .degree("BSc Computer Science")
+                    .year("2018")
+            })
+            .finish();
+
+        let rendered = resume.to_string();
+
+        assert!(rendered.contains("# Jane Doe"));
+        assert!(rendered.contains(
+            "**Email:** jane@example.com | **Phone:** +49-555-0100 | **Web:** https://example.com"
+        ));
+        assert!(rendered.contains("## Summary"));
+        assert!(rendered.contains("#### Languages"));
+        assert!(rendered.contains("### Staff Engineer @ Example Co (2022) - Present"));
+        assert!(rendered.contains("- Reduced release friction"));
+        assert!(rendered.contains("## Education"));
+    }
+}
