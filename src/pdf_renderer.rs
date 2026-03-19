@@ -1,4 +1,4 @@
-use crate::resume::Resume;
+use crate::resume::{Experience, Resume};
 use anyhow::{Context, Result};
 use font_kit::family_name::FamilyName;
 use font_kit::properties::{Properties, Style as FontStyle, Weight};
@@ -6,7 +6,11 @@ use font_kit::source::SystemSource;
 use genpdf::elements;
 use genpdf::{Element, SimplePageDecorator, style};
 
-fn load_font_data(family_name: &str, weight: Weight, style: FontStyle) -> Result<genpdf::fonts::FontData> {
+fn load_font_data(
+    family_name: &str,
+    weight: Weight,
+    style: FontStyle,
+) -> Result<genpdf::fonts::FontData> {
     let source = SystemSource::new();
     let mut props = Properties::new();
     props.weight(weight);
@@ -53,16 +57,7 @@ pub fn export_to_pdf(resume: &Resume, output_file: &str) -> Result<()> {
     doc.push(title_para.styled(style::Style::new().bold().with_font_size(24)));
 
     // Contact Info
-    let contact_text = [
-        Some(&resume.email),
-        resume.phone.as_ref(),
-        resume.website.as_ref(),
-    ]
-    .iter()
-    .flatten()
-    .map(|s| s.as_str())
-    .collect::<Vec<_>>()
-    .join(" | ");
+    let contact_text = build_contact_text(resume);
     let mut contact_para = elements::Paragraph::new(contact_text);
     contact_para.set_alignment(genpdf::Alignment::Center);
     doc.push(contact_para.styled(style::Style::new().with_font_size(10)));
@@ -105,10 +100,7 @@ pub fn export_to_pdf(resume: &Resume, output_file: &str) -> Result<()> {
             let title_para = elements::Paragraph::new(title_text);
             doc.push(title_para.styled(style::Style::new().bold().with_font_size(11)));
 
-            let date_text = match &exp.end_date {
-                Some(end) => format!("{} - {}", exp.start_date, end),
-                None => exp.start_date.clone(),
-            };
+            let date_text = format_experience_dates(exp);
             let date_para = elements::Paragraph::new(date_text);
             doc.push(
                 date_para.styled(
@@ -159,10 +151,68 @@ pub fn export_to_pdf(resume: &Resume, output_file: &str) -> Result<()> {
 fn section_header(text: &str) -> elements::LinearLayout {
     let mut layout = elements::LinearLayout::vertical();
     layout.push(elements::Break::new(0.5));
-    layout.push(
-        elements::Paragraph::new(text)
-            .styled(style::Style::new().bold().with_font_size(14))
-    );
+    layout
+        .push(elements::Paragraph::new(text).styled(style::Style::new().bold().with_font_size(14)));
     layout.push(elements::Break::new(0.5));
     layout
+}
+
+fn build_contact_text(resume: &Resume) -> String {
+    [
+        Some(resume.email.as_str()),
+        resume.phone.as_deref(),
+        resume.website.as_deref(),
+    ]
+    .into_iter()
+    .flatten()
+    .collect::<Vec<_>>()
+    .join(" | ")
+}
+
+fn format_experience_dates(experience: &Experience) -> String {
+    match experience.end_date.as_deref() {
+        Some(end) => format!("{} - {}", experience.start_date, end),
+        None => experience.start_date.clone(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{build_contact_text, format_experience_dates};
+    use crate::resume::Resume;
+
+    #[test]
+    fn build_contact_text_skips_missing_optional_fields() {
+        let resume = Resume {
+            email: "jane@example.com".to_string(),
+            website: Some("https://example.com".to_string()),
+            ..Default::default()
+        };
+
+        assert_eq!(
+            build_contact_text(&resume),
+            "jane@example.com | https://example.com"
+        );
+    }
+
+    #[test]
+    fn format_experience_dates_uses_end_date_when_present() {
+        let experience = crate::resume::Experience {
+            start_date: "2022".to_string(),
+            end_date: Some("Present".to_string()),
+            ..Default::default()
+        };
+
+        assert_eq!(format_experience_dates(&experience), "2022 - Present");
+    }
+
+    #[test]
+    fn format_experience_dates_returns_start_date_when_open_ended() {
+        let experience = crate::resume::Experience {
+            start_date: "2022".to_string(),
+            ..Default::default()
+        };
+
+        assert_eq!(format_experience_dates(&experience), "2022");
+    }
 }
