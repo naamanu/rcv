@@ -7,7 +7,7 @@ A simple resume generator written in Rust that converts declarative `.rcv` files
 - Simple, human-readable resume format
 - Automatic PDF generation
 - Markdown output support
-- System font integration
+- LaTeX-style PDF output using bundled Computer Modern fonts (CMU Serif, SIL OFL — see `fonts/LICENSE-OFL.txt`)
 
 ## Installation
 
@@ -23,7 +23,15 @@ cargo run
 
 # Specify a custom resume file
 cargo run -- my-resume.rcv
+
+# Choose the PDF output path
+cargo run -- my-resume.rcv -o out/cv.pdf
+
+# Markdown only (clean stdout, safe to pipe)
+cargo run -- my-resume.rcv --no-pdf > resume.md
 ```
+
+Progress and warning messages (unknown directives, typos, missing fields) are printed to stderr, so stdout always contains only the Markdown output.
 
 ## Resume Format
 
@@ -35,14 +43,17 @@ Create a `.rcv` file using the following format:
 @phone: +1-234-567-8900
 @website: https://yourwebsite.com
 
+@links:
+LinkedIn: https://linkedin.com/in/yourname
+GitHub: https://github.com/yourname
+
 @summary:
 Your professional summary goes here.
 You can use multiple lines.
 
 @skills:
-languages: Rust, Python, JavaScript
-frameworks: React, Next.js, Flask
-tools: Git, Docker, Kubernetes
+Languages: Rust, Python, JavaScript
+Technologies: React, Git, Docker, Kubernetes
 
 @experience:
 title: Software Engineer
@@ -52,11 +63,20 @@ description: Location
 - Key achievement or responsibility
 - Another achievement with metrics
 
+@project:
+name: my-tool
+description: One-line description of what it does.
+tech: Rust, SQLite
+link: https://github.com/yourname/my-tool
+
 @education:
 school: University Name
 degree: Bachelor of Science in Computer Science
 year: 2016 - 2020
+location: City, Country
 ```
+
+Skill categories are free-form: any `Label: item, item` line inside `@skills:` becomes its own category. Repeat `@experience:`, `@project:`, and `@education:` blocks for multiple entries.
 
 ## Example Run
 
@@ -67,14 +87,13 @@ $ cargo run -- resume.rcv
 Parsing resume from resume.rcv...
 # John Doe
 
-**Email:** john.doe@example.com | **Phone:** +1-234-567-8900 | **Web:** https://johndoe.com
+**Email:** john.doe@example.com | **Phone:** +1-234-567-8900 | **Web:** https://johndoe.com | [GitHub](https://github.com/johndoe)
 
 ## Summary
 A highly motivated Software Engineer with a passion for Rust and declarative formatting.
 
-## Skills
-#### Languages
-Rust, Python, JavaScript
+## Education
+**State University**, BSc Computer Science (2016 - 2020)
 
 ## Experience
 ### Software Engineer @ Example Corp (2020) - Present
@@ -84,13 +103,19 @@ _Remote_
 - Built an internal PDF generation service that reduced rendering time by 80%.
 - Migrated legacy microservices from Java to Axum (Rust).
 
-## Education
-**State University**, BSc Computer Science (2016 - 2020)
+## Projects
+- **[my-tool](https://github.com/johndoe/my-tool)** _(Rust)_: Minimal project scaffolding tool.
 
-Loading system fonts...
+## Skills
+#### Languages
+Rust, Python, JavaScript
+
+Loading fonts...
 Rendering PDF to resume.pdf...
 Successfully generated resume.pdf
 ```
+
+(The progress lines are printed to stderr; only the Markdown itself goes to stdout.)
 *Screenshot: The `cargo run` text output, representing a standard resume build pipeline.*
 
 ## Documentation

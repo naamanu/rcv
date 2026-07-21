@@ -28,16 +28,37 @@ To specify a custom `.rcv` file, pass the filename as the first positional argum
 cargo run -- my-resume.rcv
 ```
 
+## Options
+
+```text
+Usage: rcv [OPTIONS] [FILE]
+
+Arguments:
+  FILE                 input .rcv file (default: resume.rcv)
+
+Options:
+  -o, --output <FILE>  PDF output path (default: input file with .pdf extension)
+      --no-pdf         print Markdown only, skip PDF generation
+  -h, --help           print this help
+```
+
 ## Outputs
 
 RCV automatically handles the generation of two assets every time it is run:
 
 1. **Standard Output (Stdout):**
-   The compiled resume is printed to your terminal mapped directly as structural Markdown. This is very useful if you want to pipe the text into another tool.
-   
+   The compiled resume is printed to your terminal mapped directly as structural Markdown. Progress and warning messages go to stderr, so stdout stays clean for piping into another tool.
+
    ```bash
    cargo run > out.md
    ```
 
 2. **PDF File:**
-   Alongside the `.rcv` input file, RCV places a matching `.pdf` file. For instance, running `cargo run -- jane_doe.rcv` will silently write `jane_doe.pdf` in the same directory.
+   Alongside the `.rcv` input file, RCV places a matching `.pdf` file. For instance, running `cargo run -- jane_doe.rcv` will silently write `jane_doe.pdf` in the same directory. Use `-o`/`--output` to choose a different path, or `--no-pdf` to skip PDF generation entirely.
+
+## Diagnostics
+
+RCV validates its input rather than failing silently:
+
+- A missing `@name:` directive is an error.
+- Unknown directives (e.g. a typo like `@experiance:`), unrecognized keys inside a section, and text outside any section produce warnings on stderr with the offending line number. The run still succeeds.
