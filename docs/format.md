@@ -21,6 +21,18 @@ The basic contact and metadata fields. These are single-line properties.
 @website: https://yourwebsite.com
 ```
 
+`@name:` is required; everything else is optional (a missing `@email:` produces a warning).
+
+### Links
+
+The `@links:` directive starts a section of labelled links, one per line, rendered in the resume header.
+
+```rcv
+@links:
+LinkedIn: https://linkedin.com/in/yourname
+GitHub: https://github.com/yourname
+```
+
 ### Summary
 
 The `@summary:` block allows for multi-line text blocks. It continues capturing text until the next `@` directive is reached.
@@ -33,14 +45,15 @@ I specialize in Rust.
 
 ### Skills
 
-The `@skills:` directive starts a section where you can categorize skills using `languages:`, `frameworks:`, and `tools:`. Use comma-separated values.
+The `@skills:` directive starts a section of free-form categories. Any `Label: item, item` line becomes its own category, so you can pick groupings like `Languages`, `Technologies`, or `Frameworks`. Use comma-separated values; category labels are rendered as written.
 
 ```rcv
 @skills:
-languages: Rust, Python, Go
-frameworks: React, Rocket
-tools: Git, Docker, Kubernetes
+Languages: Rust, Python, Go
+Technologies: React, Git, Docker, Kubernetes
 ```
+
+Multiple `@skills:` blocks are merged; items in a repeated category label (case-insensitive) are appended to the existing category.
 
 ### Experience
 
@@ -59,9 +72,27 @@ description: Remote, UK # Optional location/details
 **Sub-fields:**
 - `title:` (Required)
 - `company:` (Required)
-- `date:` (Required) - Accepts formats like `2020 - 2023` or `2022 - Present`.
+- `date:` (Required) - Accepts formats like `2020 - 2023` or `2022 - Present`. The range splits at a spaced ` - ` first, so dates such as `2020-09 - 2021-05` also work.
 - `description:` (Optional) - Often used for location or a brief context.
 - `- <text>` (Optional list items) - Add bullet points detailing accomplishments.
+
+### Projects
+
+The `@project:` directive begins a new project entry (the spelling `@projects:` is also accepted). Define one block per project.
+
+```rcv
+@project:
+name: my-tool
+description: Minimal project scaffolding tool with build configs.
+tech: Rust, SQLite
+link: https://github.com/yourname/my-tool
+```
+
+**Sub-fields:**
+- `name:` (Required)
+- `description:` (Required)
+- `tech:` (Optional) - Comma-separated technologies, rendered in bold after the description.
+- `link:` (Optional) - Rendered as a shortened URL next to the project.
 
 ### Education
 
@@ -72,9 +103,11 @@ The `@education:` directive behaves identically to experience but targets school
 school: State University
 degree: BSc Computer Science
 year: 2015 - 2019
+location: Leicester, UK
 ```
 
 **Sub-fields:**
 - `school:` (Required)
 - `degree:` (Required)
-- `year:` (Required)
+- `year:` (Required) - Taken verbatim, so ranges like `Jan. 2024 - July 2025` are fine.
+- `location:` (Optional) - Shown right-aligned in the PDF, like the experience location.
