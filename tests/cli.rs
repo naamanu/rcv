@@ -68,6 +68,33 @@ fn no_pdf_flag_skips_pdf_generation() {
 }
 
 #[test]
+fn no_pdf_with_output_fails_with_helpful_error() {
+    let dir = scratch_dir("no_pdf_with_output_fails_with_helpful_error");
+    let input = dir.join("sample.rcv");
+    let pdf = dir.join("out.pdf");
+    fs::write(&input, SAMPLE).expect("sample input should be writable");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_rcv"))
+        .arg(&input)
+        .arg("--output")
+        .arg(&pdf)
+        .arg("--no-pdf")
+        .output()
+        .expect("binary should run");
+
+    // The incompatible combination must be rejected up front, not silently
+    // accepted while the requested output path is discarded.
+    assert!(!output.status.success());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("--no-pdf"), "stderr: {}", stderr);
+    assert!(stderr.contains("--output"), "stderr: {}", stderr);
+    assert!(
+        !pdf.exists(),
+        "no PDF should be written when the run is rejected"
+    );
+}
+
+#[test]
 fn missing_name_fails_with_helpful_error() {
     let dir = scratch_dir("missing_name_fails_with_helpful_error");
     let input = dir.join("broken.rcv");

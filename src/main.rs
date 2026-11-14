@@ -48,6 +48,10 @@ fn parse_args(argv: impl Iterator<Item = String>) -> Result<Option<Args>> {
         }
     }
 
+    if no_pdf && output.is_some() {
+        bail!("'--no-pdf' cannot be combined with '--output'\n\n{}", USAGE);
+    }
+
     Ok(Some(Args {
         input: input.unwrap_or_else(|| "resume.rcv".to_string()),
         output,
